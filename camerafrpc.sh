@@ -14,12 +14,12 @@ log() {
 
 # Проверка интерфейса WLAN и состояния точки доступа
 check_access_point() {
-    ifconfig $WLAN_INTERFACE > $LOG_DIR/ifconfig_output.log 2>&1
-    wlan_ip=$(ifconfig $WLAN_INTERFACE | grep 'inet ' | awk '{ print $2 }')
+    ifconfig > $LOG_DIR/ifconfig_output.log 2>&1
+    wlan_ip=$(ifconfig | grep -A 1 "$WLAN_INTERFACE" | grep 'inet ' | awk '{ print $2 }')
 
     log "WLAN IP: $wlan_ip"
 
-    if [[ -z "$wlan_ip" ]]; then
+    if [ -z "$wlan_ip" ]; then
         log "Точка доступа не запущена. IP-адрес не найден."
         termux-toast "Точка доступа не запущена. IP-адрес не найден."
         termux-notification --title "Ошибка" --content "Точка доступа не запущена. IP-адрес не найден."
@@ -28,7 +28,7 @@ check_access_point() {
 
     third_octet=$(echo $wlan_ip | cut -d'.' -f3)
 
-    if [[ "$third_octet" == "0" || "$third_octet" == "1" ]]; then
+    if [ "$third_octet" -eq 0 ] || [ "$third_octet" -eq 1 ]; then
         log "Точка доступа не запущена. IP-адрес указывает на подключение к Wi-Fi."
         termux-toast "Точка доступа не запущена. Подключение к Wi-Fi."
         termux-notification --title "Ошибка" --content "Точка доступа не запущена. Подключение к Wi-Fi."
