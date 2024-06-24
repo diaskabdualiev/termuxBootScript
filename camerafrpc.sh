@@ -42,7 +42,7 @@ check_access_point() {
 
 # Проверка устройств с открытым портом RTSP (554)
 check_rtsp_port() {
-    nmap -p 554 --open $wlan_ip > $LOG_DIR/nmap_output.log 2>&1
+    nmap -p 554 --open ${wlan_ip%.*}.0/24 > $LOG_DIR/nmap_output.log 2>&1
 
     if grep -q "554/tcp open rtsp" $LOG_DIR/nmap_output.log; then
         log "Устройство с открытым портом RTSP найдено."
