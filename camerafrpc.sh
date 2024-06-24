@@ -44,10 +44,14 @@ check_access_point() {
 check_rtsp_port() {
     nmap -p 554 --open ${wlan_ip%.*}.0/24 > $LOG_DIR/nmap_output.log 2>&1
 
-    if grep -q "554/tcp open rtsp" $LOG_DIR/nmap_output.log; then
-        log "Устройство с открытым портом RTSP найдено."
-        termux-toast "Устройство с открытым портом RTSP найдено."
-        termux-notification --title "Успех" --content "Устройство с открытым портом RTSP найдено."
+    open_rtsp_ips=$(grep -B 4 "554/tcp open  rtsp" $LOG_DIR/nmap_output.log | grep "Nmap scan report for" | awk '{ print $5 }')
+
+    if [ -n "$open_rtsp_ips" ]; then
+        for ip in $open_rtsp_ips; do
+            log "Устройство с открытым портом RTSP найдено: $ip"
+            termux-toast "Устройство с открытым портом RTSP найдено: $ip"
+            termux-notification --title "Успех" --content "Устройство с открытым портом RTSP найдено: $ip"
+        done
     else
         log "Устройство с открытым портом RTSP не найдено."
         termux-toast "Устройство с открытым портом RTSP не найдено."
