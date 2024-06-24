@@ -4,7 +4,7 @@
 pkg install termux-api -y
 pkg install net-tools -y
 pkg install nmap -y
-pkg install frpc -y
+pkg install frp -y
 
 # Тестирование установки Termux API
 echo "Test api application"
