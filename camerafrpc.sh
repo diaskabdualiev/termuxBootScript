@@ -1,9 +1,8 @@
 #!/data/data/com.termux/files/usr/bin/sh
 termux-wake-lock
 
-LOG_DIR=~/logs
-LOG_FILE=$LOG_DIR/camerafrpc.log
-WLAN_INTERFACE=wlan0
+# Загрузка переменных конфигурации
+source ~/.termux/boot/config.sh
 
 # Создание директории для логов
 mkdir -p $LOG_DIR
@@ -40,18 +39,35 @@ check_access_point() {
     return 0
 }
 
-# Проверка устройств с открытым портом RTSP (554)
-check_rtsp_port() {
+# Проверка устройств с открытым портом RTSP (554) и запуск прокси-сервера
+check_rtsp_port_and_start_proxy() {
     nmap -p 554 --open ${wlan_ip%.*}.0/24 > $LOG_DIR/nmap_output.log 2>&1
 
-    open_rtsp_ips=$(grep -B 4 "554/tcp open  rtsp" $LOG_DIR/nmap_output.log | grep "Nmap scan report for" | awk '{ print $5 }')
+    open_rtsp_ip=$(grep -B 4 "554/tcp open  rtsp" $LOG_DIR/nmap_output.log | grep "Nmap scan report for" | awk '{ print $5 }' | head -n 1)
 
-    if [ -n "$open_rtsp_ips" ]; then
-        for ip in $open_rtsp_ips; do
-            log "Устройство с открытым портом RTSP найдено: $ip"
-            termux-toast "Устройство с открытым портом RTSP найдено: $ip"
-            termux-notification --title "Успех" --content "Устройство с открытым портом RTSP найдено: $ip"
-        done
+    if [ -n "$open_rtsp_ip" ]; then
+        log "Устройство с открытым портом RTSP найдено: $open_rtsp_ip"
+        termux-toast "Устройство с открытым портом RTSP найдено: $open_rtsp_ip"
+        termux-notification --title "Успех" --content "Устройство с открытым портом RTSP найдено: $open_rtsp_ip"
+
+        # Создание файла конфигурации frpc.ini
+        cat <<EOF > $FRPC_CONFIG
+[common]
+server_addr = $SERVER_ADDR
+server_port = $SERVER_PORT
+
+[[proxies]]
+name = "$NAME"
+type = "tcp"
+local_ip = "$open_rtsp_ip"
+local_port = 554
+remote_port = $REMOTE_PORT
+EOF
+
+        # Запуск frpc с конфигурацией и запись логов
+        frpc -c $FRPC_CONFIG > $LOG_DIR/frpc.log 2>&1 &
+        FRPC_PID=$!
+        log "frpc запущен с PID: $FRPC_PID"
     else
         log "Устройство с открытым портом RTSP не найдено."
         termux-toast "Устройство с открытым портом RTSP не найдено."
@@ -59,10 +75,32 @@ check_rtsp_port() {
     fi
 }
 
-# Основной цикл
+# Проверка и перезапуск при изменении IP
+current_wlan_ip=""
+current_rtsp_ip=""
+
 while true; do
     if check_access_point; then
-        check_rtsp_port
+        new_wlan_ip=$(ifconfig | grep -A 1 "$WLAN_INTERFACE" | grep 'inet ' | awk '{ print $2 }')
+        if [ "$current_wlan_ip" != "$new_wlan_ip" ]; then
+            current_wlan_ip=$new_wlan_ip
+            current_rtsp_ip=""
+            if [ -n "$FRPC_PID" ]; then
+                kill $FRPC_PID
+                log "frpc остановлен."
+            fi
+            check_rtsp_port_and_start_proxy
+        else
+            new_rtsp_ip=$(grep -B 4 "554/tcp open  rtsp" $LOG_DIR/nmap_output.log | grep "Nmap scan report for" | awk '{ print $5 }' | head -n 1)
+            if [ "$current_rtsp_ip" != "$new_rtsp_ip" ]; then
+                current_rtsp_ip=$new_rtsp_ip
+                if [ -n "$FRPC_PID" ]; then
+                    kill $FRPC_PID
+                    log "frpc остановлен."
+                fi
+                check_rtsp_port_and_start_proxy
+            fi
+        fi
     fi
     sleep 60
 done
