@@ -1,0 +1,11 @@
+#!/data/data/com.termux/files/usr/bin/sh
+
+# Переменные конфигурации
+LOG_DIR=~/logs
+LOG_FILE=\$LOG_DIR/camerafrpc.log
+FRPC_CONFIG=~/frpc.ini
+WLAN_INTERFACE=wlan0
+SERVER_ADDR="54.224.210.175"
+SERVER_PORT=7000
+REMOTE_PORT=6100
+NAME=shecker6100

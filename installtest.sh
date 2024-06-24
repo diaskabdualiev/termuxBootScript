@@ -19,7 +19,7 @@ redefine_variables() {
         read -p "Введите новое имя: " new_name
 
         # Запись изменений в конфигурационный файл
-        cat <<EOF > ./config.sh
+        cat <<EOF > config.sh
 #!/data/data/com.termux/files/usr/bin/sh
 
 # Переменные конфигурации
@@ -35,8 +35,13 @@ EOF
 
         echo "Переменные изменены и сохранены в config.sh"
     else
-        cp ./config.sh.default ./config.sh
-        echo "Используются переменные по умолчанию."
+        if [ -f "./config.sh.default" ]; then
+            cp ./config.sh.default ./config.sh
+            echo "Используются переменные по умолчанию."
+        else
+            echo "Файл config.sh.default не найден. Проверьте, что он существует."
+            exit 1
+        fi
     fi
 }
 
