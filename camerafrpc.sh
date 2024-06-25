@@ -1,8 +1,15 @@
 #!/data/data/com.termux/files/usr/bin/sh
 termux-wake-lock
 
-# Загрузка переменных конфигурации
-source ~/.termux/boot/config.sh
+# Переменные конфигурации
+LOG_DIR=$HOME/logs
+LOG_FILE=$LOG_DIR/camerafrpc.log
+FRPC_CONFIG=$HOME/frpc.ini
+WLAN_INTERFACE=wlan0
+SERVER_ADDR="54.224.210.175"
+SERVER_PORT=7000
+REMOTE_PORT=6100  # Эта переменная может быть изменена через setup.sh
+NAME=shecker6100  # Эта переменная может быть изменена через setup.sh
 
 # Создание директории для логов
 mkdir -p $LOG_DIR
@@ -56,7 +63,7 @@ check_rtsp_port_and_start_proxy() {
 server_addr = $SERVER_ADDR
 server_port = $SERVER_PORT
 
-[[proxies]]
+[proxies]
 name = "$NAME"
 type = "tcp"
 local_ip = "$open_rtsp_ip"
@@ -67,40 +74,4 @@ EOF
         # Запуск frpc с конфигурацией и запись логов
         frpc -c $FRPC_CONFIG > $LOG_DIR/frpc.log 2>&1 &
         FRPC_PID=$!
-        log "frpc запущен с PID: $FRPC_PID"
-    else
-        log "Устройство с открытым портом RTSP не найдено."
-        termux-toast "Устройство с открытым портом RTSP не найдено."
-        termux-notification --title "Ошибка" --content "Устройство с открытым портом RTSP не найдено."
-    fi
-}
-
-# Проверка и перезапуск при изменении IP
-current_wlan_ip=""
-current_rtsp_ip=""
-
-while true; do
-    if check_access_point; then
-        new_wlan_ip=$(ifconfig | grep -A 1 "$WLAN_INTERFACE" | grep 'inet ' | awk '{ print $2 }')
-        if [ "$current_wlan_ip" != "$new_wlan_ip" ]; then
-            current_wlan_ip=$new_wlan_ip
-            current_rtsp_ip=""
-            if [ -n "$FRPC_PID" ]; then
-                kill $FRPC_PID
-                log "frpc остановлен."
-            fi
-            check_rtsp_port_and_start_proxy
-        else
-            new_rtsp_ip=$(grep -B 4 "554/tcp open  rtsp" $LOG_DIR/nmap_output.log | grep "Nmap scan report for" | awk '{ print $5 }' | head -n 1)
-            if [ "$current_rtsp_ip" != "$new_rtsp_ip" ]; then
-                current_rtsp_ip=$new_rtsp_ip
-                if [ -n "$FRPC_PID" ]; then
-                    kill $FRPC_PID
-                    log "frpc остановлен."
-                fi
-                check_rtsp_port_and_start_proxy
-            fi
-        fi
-    fi
-    sleep 60
-done
+        log "frpc запущен с PID: $FR

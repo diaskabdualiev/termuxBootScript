@@ -18,30 +18,13 @@ redefine_variables() {
         read -p "Введите новый remotePort: " new_remote_port
         read -p "Введите новое имя: " new_name
 
-        # Запись изменений в конфигурационный файл
-        cat <<EOF > config.sh
-#!/data/data/com.termux/files/usr/bin/sh
+        # Запись изменений в основной скрипт
+        sed -i "s/^REMOTE_PORT=.*$/REMOTE_PORT=$new_remote_port/" camerafrpc.sh
+        sed -i "s/^NAME=.*$/NAME=\"$new_name\"/" camerafrpc.sh
 
-# Переменные конфигурации
-LOG_DIR=~/logs
-LOG_FILE=\$LOG_DIR/camerafrpc.log
-FRPC_CONFIG=~/frpc.ini
-WLAN_INTERFACE=wlan0
-SERVER_ADDR="54.224.210.175"
-SERVER_PORT=7000
-REMOTE_PORT=$new_remote_port
-NAME=$new_name
-EOF
-
-        echo "Переменные изменены и сохранены в config.sh"
+        echo "Переменные изменены и сохранены в camerafrpc.sh"
     else
-        if [ -f "./config.sh.default" ]; then
-            cp ./config.sh.default ./config.sh
-            echo "Используются переменные по умолчанию."
-        else
-            echo "Файл config.sh.default не найден. Проверьте, что он существует."
-            exit 1
-        fi
+        echo "Используются переменные по умолчанию."
     fi
 }
 
@@ -55,9 +38,5 @@ mkdir -p ~/.termux/boot
 # Копирование и установка прав для скрипта автозапуска
 cp ./camerafrpc.sh ~/.termux/boot/camerafrpc.sh
 chmod +x ~/.termux/boot/camerafrpc.sh
-
-# Копирование файла конфигурации
-cp ./config.sh ~/.termux/boot/config.sh
-chmod +x ~/.termux/boot/config.sh
 
 echo "Установка и настройка завершены"
